@@ -38,7 +38,7 @@ def test_mastered_upsert_keeps_first_seen(store):
 def test_decide_lesson_lifecycle(store):
     s = Store(store)
     approval_id = s.pending_lessons("s1")[0]["id"]
-    out = s.decide_lesson(approval_id, "edited", "better draft")
+    out = s.decide_lesson(approval_id, "s1", "edited", "better draft")
     assert out["status"] == "edited" and out["edited_draft"] == "better draft"
     assert s.pending_lessons("s1") == []
 
@@ -46,7 +46,21 @@ def test_decide_lesson_lifecycle(store):
 def test_decide_rejects_bad_status(store):
     s = Store(store)
     with pytest.raises(ValueError, match="bad status"):
-        s.decide_lesson(1, "maybe")
+        s.decide_lesson(1, "s1", "maybe")
+
+
+def test_decide_cannot_bypass_ownership(store):
+    # security review finding: one student must not decide another's approval
+    s = Store(store)
+    approval_id = s.pending_lessons("s1")[0]["id"]
+    assert s.decide_lesson(approval_id, "s2", "accepted") is None
+    assert len(s.pending_lessons("s1")) == 1  # untouched
+
+
+def test_stage_rejects_oversized_draft(store):
+    s = Store(store)
+    with pytest.raises(ValueError, match="draft too large"):
+        s.stage_lesson("s1", "loops", "x" * 20_001)
 
 
 def test_progress_record_validates_kind(store):

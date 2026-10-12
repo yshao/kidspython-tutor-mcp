@@ -12,8 +12,9 @@ from src.tools import tutor
 
 def register(app: FastMCP) -> None:
     @app.prompt
-    def tutor_lesson(topic: str, audience: str = "kids",
-                     student_id: str = "demo-student") -> str:
+    def tutor_lesson(
+        topic: str, audience: str = "kids", student_id: str = "demo-student"
+    ) -> str:
         """Plan a kid-appropriate lesson on a KB topic. Agentic workflow:
         outline the KB → parallel search of the 2-3 relevant chapters →
         guardrail-check the framing → structured draft → STAGE for approval
@@ -37,11 +38,13 @@ def register(app: FastMCP) -> None:
             "5. stage_lesson(student_id, topic, draft) to persist it as pending.\n"
             "6. STOP — show me the draft and ask: accept / edit / reject. On my "
             "decision call decide_lesson (with edited_draft if I edited). Only "
-            "after an accepted/edited verdict may the lesson be presented.")
+            "after an accepted/edited verdict may the lesson be presented."
+        )
 
     @app.prompt
-    def exercise_coach(thread_id: str, attempt: str,
-                       student_id: str = "demo-student") -> str:
+    def exercise_coach(
+        thread_id: str, attempt: str, student_id: str = "demo-student"
+    ) -> str:
         """Coach a student's exercise attempt: plan-and-execute with hint
         escalation under the guide-don't-solve rule, and a confirm-before-
         escalate gate. Diagnoses against the KB, never gives the solution."""
@@ -61,7 +64,8 @@ def register(app: FastMCP) -> None:
             "NEVER output the completed solution; that is the persona's rule.\n"
             "4. If the student is still stuck, STOP and ask them whether they "
             "want the next hint level before escalating. Record the outcome with "
-            "progress_record (topic_mastered when they succeed).")
+            "progress_record (topic_mastered when they succeed)."
+        )
 
     @app.prompt
     def curate_eval_set(count: int = 10, student_id: str = "demo-student") -> str:
@@ -80,4 +84,5 @@ def register(app: FastMCP) -> None:
             "source_chunk_id, kind} each and STOP.\n"
             "4. Keep ONLY the questions I approve; output the kept set as JSONL "
             "(one JSON object per line) ready for the kidspython-eval dataset. "
-            "Discard the rest without comment.")
+            "Discard the rest without comment."
+        )

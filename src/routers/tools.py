@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from fastmcp import FastMCP
 
+from src.tools import eval as eval_tools
 from src.tools import guardrail, progress, tutor
 
 
@@ -82,3 +83,34 @@ def register(app: FastMCP) -> None:
         """Resolve a staged lesson: status = accepted | edited | rejected
         (edited requires edited_draft). Returns the final decision row."""
         return progress.decide_lesson_impl(approval_id, status, edited_draft)
+
+    @app.tool
+    def eval_scores(trace_id: str) -> list[dict]:
+        """RAGAS/DeepEval scores pushed onto a tutor trace (Langfuse). Each
+        row: name, value, pass_threshold, passed, judge comment. Requires
+        LANGFUSE_* in .env; raises EvalUnavailable otherwise."""
+        return [s.model_dump() for s in eval_tools.eval_scores_impl(trace_id)]
+
+    @app.tool
+    def synth_question(chunk_id: str) -> dict:
+        """Generate ONE kid-style practice question from a KB chunk
+        ({question, source_chunk_id, kind}) — the unit of the eval curation
+        workflow (see the curate_eval_set prompt). Requires an LLM key."""
+        return eval_tools.synth_question_impl(chunk_id).model_dump()
+
+    @app.tool
+    def grade_reply(
+        question: str, reply: str, metric: str = "deepeval_directness"
+    ) -> dict:
+        """LLM-judge a tutor reply against one registry criterion (GEval
+        metrics only — see tutor://eval/metrics for names, criteria and
+        thresholds). Returns {metric, score, pass_threshold, passed,
+        comment}."""
+        return eval_tools.grade_reply_impl(question, reply, metric).model_dump()
+
+    @app.resource("tutor://eval/metrics")
+    def eval_metrics_uri() -> str:
+        """The 12-metric eval registry: names, thresholds, judge criteria."""
+        import json
+
+        return json.dumps(eval_tools.registry_metrics(), indent=1)

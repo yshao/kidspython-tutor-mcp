@@ -41,3 +41,22 @@ class Settings(BaseSettings):
 @lru_cache
 def settings() -> Settings:
     return Settings()
+
+
+class LlmSettings(BaseSettings):
+    """The MCP server's own LLM (judge/synth/hints) — same z.ai gateway the
+    tutor service uses (Anthropic protocol). Blank key = LLM tools degrade."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
+
+    zai_api_key: str = ""
+    zai_base_url: str = "https://api.z.ai/api/anthropic"
+    llm_model: str = "glm-4.6"
+    llm_max_tokens: int = 2048
+
+
+@lru_cache
+def llm_settings() -> LlmSettings:
+    return LlmSettings()

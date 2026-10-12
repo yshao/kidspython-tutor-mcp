@@ -38,23 +38,26 @@ def progress_record_impl(student_id: str, event: dict) -> dict:
     kind = event.get("kind")
     if kind not in EVENT_KINDS:
         raise ValueError(f"kind must be one of {EVENT_KINDS}")
+    topic = event.get("topic")
+    # uniform validation: every kind names its required fields explicitly —
+    # no KeyError paths that surface as server crashes
+    if kind in ("lesson_done", "topic_mastered", "pref_set") and not topic:
+        raise ValueError(f"{kind} requires 'topic'")
     s = _store()
     if kind == "episode":
         s.add_episode(
             student_id,
-            str(event.get("topic", "chat")),
+            str(topic or "chat"),
             str(event.get("detail", "")),
             thread_id=event.get("thread_id"),
         )
     elif kind == "lesson_done":
-        s.add_episode(
-            student_id, "lesson_done", str(event.get("detail", event.get("topic", "")))
-        )
-        s.mark_mastered(student_id, str(event["topic"]))
+        s.add_episode(student_id, "lesson_done", str(event.get("detail", topic)))
+        s.mark_mastered(student_id, str(topic))
     elif kind == "topic_mastered":
-        s.mark_mastered(student_id, str(event["topic"]))
+        s.mark_mastered(student_id, str(topic))
     elif kind == "pref_set":
-        s.set_preference(student_id, str(event["topic"]), str(event.get("detail", "")))
+        s.set_preference(student_id, str(topic), str(event.get("detail", "")))
     return {
         "ok": True,
         "mastered": len(s.mastered(student_id)),
@@ -70,9 +73,15 @@ def stage_lesson_impl(student_id: str, topic: str, draft: str) -> dict:
 
 
 def decide_lesson_impl(
-    approval_id: int, status: str, edited_draft: str | None = None
+    approval_id: int,
+    student_id: str,
+    status: str,
+    edited_draft: str | None = None,
 ) -> dict:
-    out = _store().decide_lesson(approval_id, status, edited_draft)
+    out = _store().decide_lesson(approval_id, student_id, status, edited_draft)
     if out is None:
-        raise ValueError(f"unknown approval_id: {approval_id}")
+        raise ValueError(
+            f"unknown approval_id {approval_id} for student {student_id!r} — "
+            "approvals may only be decided by their own student"
+        )
     return out

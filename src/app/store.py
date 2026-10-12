@@ -107,7 +107,13 @@ class Store:
 
     # -- human-in-the-loop lesson approvals ---------------------------------
 
+    MAX_DRAFT_CHARS = 20_000  # drafts are docs, not dumps
+
     def stage_lesson(self, student_id: str, topic: str, draft: str) -> int:
+        if len(draft) > self.MAX_DRAFT_CHARS:
+            raise ValueError(
+                f"draft too large: {len(draft)} > {self.MAX_DRAFT_CHARS} chars"
+            )
         cur = self.db.execute(
             "INSERT INTO lesson_approvals (student_id, topic, draft, ts) "
             "VALUES (?, ?, ?, ?)",
@@ -117,14 +123,23 @@ class Store:
         return cur.lastrowid
 
     def decide_lesson(
-        self, approval_id: int, status: str, edited_draft: str | None = None
+        self,
+        approval_id: int,
+        student_id: str,
+        status: str,
+        edited_draft: str | None = None,
     ) -> dict | None:
+        """Resolve an approval. student_id is part of the authorization: a
+        decision only lands when the approval belongs to that student —
+        one student (or a compromised client) cannot decide another's
+        pending lesson."""
         if status not in ("accepted", "edited", "rejected"):
             raise ValueError(f"bad status: {status!r}")
         cur = self.db.execute(
             "UPDATE lesson_approvals SET status = ?, edited_draft = ? "
-            "WHERE id = ? RETURNING student_id, topic, draft, edited_draft, status",
-            (status, edited_draft, approval_id),
+            "WHERE id = ? AND student_id = ? "
+            "RETURNING student_id, topic, draft, edited_draft, status",
+            (status, edited_draft, approval_id, student_id),
         )
         rows = cur.fetchall()  # consume: RETURNING holds the txn open otherwise
         self.db.commit()
