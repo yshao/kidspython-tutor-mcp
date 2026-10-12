@@ -60,3 +60,11 @@ class SynthQuestion(BaseModel):
     question: str
     source_chunk_id: str
     kind: Literal["what", "why", "how", "exercise"]
+
+
+class ScreeningOut(BaseModel):
+    allowed: bool
+    refusal: str | None = None
+    notice: str | None = None
+    scrubbed: list[str] = Field(default_factory=list)
+    text: str = ""

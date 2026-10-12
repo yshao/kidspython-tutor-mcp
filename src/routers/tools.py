@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from fastmcp import FastMCP
 
-from src.tools import tutor
+from src.tools import guardrail, tutor
 
 
 def register(app: FastMCP) -> None:
@@ -41,3 +41,12 @@ def register(app: FastMCP) -> None:
         """Outline of the knowledge base: every doc/chapter with chunk and
         exercise counts — the map to plan lessons against."""
         return [e.model_dump() for e in tutor.kb_outline_impl()]
+
+    @app.tool
+    def guardrail_check(question: str, persona_id: str | None = None) -> dict:
+        """Scope-screen a question with the tutor's kid-safety guard:
+        allowlist topic check, PII scrub ('I am 9' / emails / phones /
+        school names → [removed] + notice), and the refusal template for
+        out-of-scope topics. Works offline (bundled kidspython scope);
+        persona_id pulls live scope config from the tutor when up."""
+        return guardrail.guardrail_check_impl(question, persona_id).model_dump()
