@@ -1,0 +1,21 @@
+# kidspython-tutor Discord bridge — systemd unit (droplet)
+# install: see mcp/deploy/install-on-droplet.sh
+[Unit]
+Description=kidspython-tutor Discord bridge (#chat-kidspython)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/discord-bridge
+EnvironmentFile=/opt/discord-bridge/discord-bridge.env
+Environment=TUTOR_BASE_URL=http://127.0.0.1:8100
+Environment=TUTOR_USER=demo
+Environment=TUTOR_PASS=12345
+ExecStart=/opt/discord-bridge/venv/bin/python /opt/discord-bridge/discord_bridge.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,21 @@
+{
+  "run_id": "42276ecb-30d7-4d66-9a0f-b1f9e1bd7a2a-108",
+  "verdicts": [
+    {
+      "action": "patch",
+      "name": "no-mistakes",
+      "ok": false,
+      "findings": [
+        "self_produced"
+      ],
+      "notes": []
+    },
+    {
+      "action": "create",
+      "name": "ci-lint-divergence",
+      "ok": true,
+      "findings": [],
+      "notes": []
+    }
+  ]
+}
