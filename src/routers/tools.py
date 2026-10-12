@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from fastmcp import FastMCP
 
-from src.tools import guardrail, tutor
+from src.tools import guardrail, progress, tutor
 
 
 def register(app: FastMCP) -> None:
@@ -50,3 +50,35 @@ def register(app: FastMCP) -> None:
         out-of-scope topics. Works offline (bundled kidspython scope);
         persona_id pulls live scope config from the tutor when up."""
         return guardrail.guardrail_check_impl(question, persona_id).model_dump()
+
+    @app.tool
+    def progress_get(student_id: str) -> dict:
+        """One student's long-term memory: recent episodes (episodic),
+        mastered topics (semantic), preferences like hint_level and pacing
+        (procedural), and any lesson drafts awaiting approval. Persisted in
+        the server's SQLite — survives restarts."""
+        return progress.progress_get_impl(student_id).model_dump()
+
+    @app.tool
+    def progress_record(student_id: str, event: dict) -> dict:
+        """Record a learning event. event = {"kind": "episode"|"lesson_done"|
+        "topic_mastered"|"pref_set", "topic": str, "detail"?: str,
+        "thread_id"?: str}. lesson_done also marks the topic mastered;
+        pref_set stores a procedural preference (e.g. topic=hint_level,
+        detail=path)."""
+        return progress.progress_record_impl(student_id, event)
+
+    @app.tool
+    def stage_lesson(student_id: str, topic: str, draft: str) -> dict:
+        """Human-in-the-loop gate: stage a lesson draft as pending approval.
+        Nothing is presented to the student until decide_lesson accepts or
+        edits it. Returns {approval_id, status: 'pending'}."""
+        return progress.stage_lesson_impl(student_id, topic, draft)
+
+    @app.tool
+    def decide_lesson(
+        approval_id: int, status: str, edited_draft: str | None = None
+    ) -> dict:
+        """Resolve a staged lesson: status = accepted | edited | rejected
+        (edited requires edited_draft). Returns the final decision row."""
+        return progress.decide_lesson_impl(approval_id, status, edited_draft)
