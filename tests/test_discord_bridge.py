@@ -6,11 +6,12 @@ import discord_bridge as bridge
 
 def test_short_reply_passes_through():
     assert bridge.chunk_reply("A variable is a box with a name!") == [
-        "A variable is a box with a name!"]
+        "A variable is a box with a name!"
+    ]
 
 
 def test_long_reply_splits_on_sentence_boundaries():
-    reply = ("First sentence stays whole. " * 60)  # ~1600 chars
+    reply = "First sentence stays whole. " * 60  # ~1600 chars
     reply += "Second long sentence also stays whole. " * 60
     parts = bridge.chunk_reply(reply)
     assert len(parts) >= 2
@@ -42,6 +43,7 @@ class _Msg:
 
 def _bridge(channel_id=42):
     import os
+
     os.environ["DISCORD_CHANNEL_ID"] = str(channel_id)
     b = bridge.Bridge.__new__(bridge.Bridge)  # no gateway login
     b.tutor = None
@@ -52,5 +54,5 @@ def _bridge(channel_id=42):
 def test_gate_allows_only_watched_channel_from_humans():
     b = _bridge(42)
     assert b._allowed(_Msg(42)) is True
-    assert b._allowed(_Msg(43)) is False          # other channel
+    assert b._allowed(_Msg(43)) is False  # other channel
     assert b._allowed(_Msg(42, author_bot=True)) is False  # bots ignored

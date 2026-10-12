@@ -18,8 +18,9 @@ import os
 import discord
 import httpx
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s %(levelname)s %(name)s %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s"
+)
 log = logging.getLogger("discord-bridge")
 
 DISCORD_LIMIT = 2000
@@ -34,12 +35,16 @@ def chunk_reply(text: str, limit: int = DISCORD_LIMIT) -> list[str]:
     parts: list[str] = []
     while len(text) > limit:
         window = text[:limit]
-        cut = max(window.rfind(". "), window.rfind("! "), window.rfind("? "),
-                  window.rfind("\n"))
+        cut = max(
+            window.rfind(". "),
+            window.rfind("! "),
+            window.rfind("? "),
+            window.rfind("\n"),
+        )
         if cut < limit // 2:  # no sane boundary in the window: hard split
             cut = limit - 1
         parts.append(text[: cut + 1].strip())
-        text = text[cut + 1:].strip()
+        text = text[cut + 1 :].strip()
     if text:
         parts.append(text)
     return parts
@@ -57,21 +62,27 @@ class TutorClient:
         self.base = os.environ.get("TUTOR_BASE_URL", "http://127.0.0.1:8100")
         self.user = os.environ.get("TUTOR_USER", "demo")
         self.password = os.environ.get("TUTOR_PASS", "12345")
-        self.http = httpx.Client(base_url=self.base, timeout=120.0,
-                                 follow_redirects=False)
+        self.http = httpx.Client(
+            base_url=self.base, timeout=120.0, follow_redirects=False
+        )
 
     def login(self) -> None:
-        r = self.http.post("/login", data={"username": self.user,
-                                           "password": self.password})
+        r = self.http.post(
+            "/login", data={"username": self.user, "password": self.password}
+        )
         if r.status_code != 302 or "tutor_session" not in r.headers.get(
-                "set-cookie", ""):
+            "set-cookie", ""
+        ):
             raise RuntimeError(f"tutor login failed (HTTP {r.status_code})")
 
     def ask(self, thread_id: str, message: str) -> str:
         if "tutor_session" not in self.http.cookies:
             self.login()
-        payload = {"thread_id": thread_id, "message": message,
-                   "persona": "kidspython-tutor"}
+        payload = {
+            "thread_id": thread_id,
+            "message": message,
+            "persona": "kidspython-tutor",
+        }
         r = self.http.post("/chat", json=payload)
         if r.status_code == 302:  # session dropped mid-flight
             self.login()
@@ -79,8 +90,7 @@ class TutorClient:
         r.raise_for_status()
         data = r.json()
         if data.get("error"):
-            return ("Hmm — I hit a backend problem. "
-                    "Ask me again in a moment!")
+            return "Hmm — I hit a backend problem. Ask me again in a moment!"
         return str(data.get("reply") or "…")
 
 
@@ -93,12 +103,12 @@ class Bridge(discord.Client):
         self.channel_id = int(os.environ["DISCORD_CHANNEL_ID"])
 
     async def on_ready(self):
-        log.info("gateway READY as %s — watching channel %s",
-                 self.user, self.channel_id)
+        log.info(
+            "gateway READY as %s — watching channel %s", self.user, self.channel_id
+        )
 
     def _allowed(self, message: discord.Message) -> bool:
-        return (message.channel.id == self.channel_id
-                and not message.author.bot)
+        return message.channel.id == self.channel_id and not message.author.bot
 
     async def on_message(self, message: discord.Message):
         if not self._allowed(message):
@@ -107,14 +117,12 @@ class Bridge(discord.Client):
         async with message.channel.typing():
             try:
                 reply = await asyncio.to_thread(
-                    self.tutor.ask, thread_id_for(self.channel_id),
-                    message.content)
+                    self.tutor.ask, thread_id_for(self.channel_id), message.content
+                )
             except Exception as exc:  # noqa: BLE001 — the bridge answers
                 # the channel even when a turn fails; never crash the gateway
-                log.error("tutor turn failed: %s: %.120s",
-                          type(exc).__name__, exc)
-                reply = ("Hmm — I hit a backend problem. "
-                         "Ask me again in a moment!")
+                log.error("tutor turn failed: %s: %.120s", type(exc).__name__, exc)
+                reply = "Hmm — I hit a backend problem. Ask me again in a moment!"
             for part in chunk_reply(reply):
                 await message.channel.send(part)
 
