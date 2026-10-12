@@ -1,0 +1,15 @@
+# MCP stdio servers are launched BY the client; this compose file exists for
+# the course requirement and for smoke-running the containerized server:
+#   docker compose up --build   (runs a one-shot surface smoke)
+services:
+  kidspython-tutor-mcp:
+    build: .
+    environment:
+      TUTOR_BASE_URL: ${TUTOR_BASE_URL:-http://127.0.0.1:8100}
+      KB_PATH: ${KB_PATH:-/app/tests/fixtures/chunks.jsonl}
+      STORE_PATH: /data/tutor_mcp.sqlite
+    volumes:
+      - tutor-mem:/data
+    stdin_open: true
+volumes:
+  tutor-mem:

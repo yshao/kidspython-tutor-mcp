@@ -1,0 +1,30 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.14"
+      - run: uv sync --dev
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest -q
+      - name: server builds and lists its surface
+        run: |
+          uv run python - <<'PY'
+          import asyncio
+          from fastmcp import Client
+          from src.server import create_server
+          async def main():
+              async with Client(create_server()) as c:
+                  tools = await c.list_tools()
+                  assert tools, "no tools registered"
+          asyncio.run(main())
+          PY
